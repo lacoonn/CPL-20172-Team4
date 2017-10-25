@@ -1,0 +1,10 @@
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\bin\Debug\CustomMessenger.exe.config
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\bin\Debug\CustomMessenger.exe
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\bin\Debug\CustomMessenger.pdb
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.csprojResolveAssemblyReference.cache
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.Form1.resources
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.Properties.Resources.resources
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.csproj.GenerateResource.Cache
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.csproj.CoreCompileInputs.cache
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.exe
+c:\users\woochan\documents\visual studio 2017\Projects\CustomMessenger\CustomMessenger\obj\Debug\CustomMessenger.pdb
