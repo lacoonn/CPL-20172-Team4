@@ -10,26 +10,20 @@ using System.IO;
 public class CustomPipe : MonoBehaviour
 {
 	public string receivingPipeName;
-	NamedPipeClientStream receivingPipe;
+	NamedPipeServerStream receivingPipe;
 
-    string receivingStatus;
-    PacketData receivingData;
+	string receivingStatus;
+    string receivingData;
 
     string sendingStatus;
     string sendingData;
 
-	byte[] receivingBuffer = new byte[1024];
-	//byte[] sendingBuffer = new byte[1024];
-
-	XmlSerializer xmlSerializer;
 
     // Use this for initialization
     void Start()
     {
-		xmlSerializer = new XmlSerializer(typeof(PacketData));
-		receivingPipe = new NamedPipeClientStream(receivingPipeName);
-		receivingData = new PacketData();
-		receivingData.typingMessage = "Initial!";
+		receivingPipe = new NamedPipeServerStream(receivingPipeName);
+		receivingData = "Initial!";
 		SetReceivingStatus("Not connected");
 	}
 
@@ -41,91 +35,54 @@ public class CustomPipe : MonoBehaviour
 		}
 		else
 		{
-			if (!IsInvoking("ConnectPipe"))
-			{
-				Invoke("ConnectPipe", 1f);
-			}
+			System.IAsyncResult async = receivingPipe.BeginWaitForConnection(null, null);
+			Debug.Log("Between async");
+			receivingPipe.EndWaitForConnection(async);
 		}
 	}
 
 	void OnGUI()
     {
         GUI.Label(new Rect(0, 0, Screen.width, Screen.height), receivingStatus);
-        GUI.Label(new Rect(0, 20, Screen.width, Screen.height), receivingData.typingMessage);
-        //GUI.Label(new Rect(10, 0, Screen.width, Screen.height), receivingStatus);
-        //GUI.Label(new Rect(10, 10, Screen.width, Screen.height), receivingData);
+        GUI.Label(new Rect(0, 20, Screen.width, Screen.height), receivingData);
     }
 
 	private void OnApplicationQuit()
 	{
 		receivingPipe.Close();
-		//receivingThread.Abort();
 	}
 
-	private void ConnectPipe()
-    {
-        receivingPipe.Connect(1);
-        if (receivingPipe.IsConnected)
-        {
-            SetReceivingStatus("Receiving pipe connected!");
-        }
-    }
+	public static PacketData DeserializeFromXML(string xmlData)
+	{
+		PacketData data = null;
 
-    /*private void ReadData()
-    {
-        while (receivingPipe.IsConnected)
-        {
-            int bytesRead = receivingPipe.Read(receivingBuffer, 0, 1024);
-            if (bytesRead > 0)
-            {
-                receivingData = System.Text.Encoding.ASCII.GetString(receivingBuffer).Trim();
-            }
-        }
-    }*/
+		StringReader stringReader = null;
+
+		XmlSerializer deserializer = new XmlSerializer(typeof(PacketData));
+		stringReader = new StringReader(xmlData);
+		data = (PacketData)deserializer.Deserialize(stringReader);
+
+		return data;
+	}
 
     private void ReadData()
     {	
 		if (receivingPipe.IsConnected)
 		{
-			int bytesRead = receivingPipe.Read(receivingBuffer, 0, 1024);
-            if (bytesRead > 0)
-            {
-                receivingData.typingMessage = System.Text.Encoding.ASCII.GetString(receivingBuffer).Trim();
-            }
+			StreamReader reader = new StreamReader(receivingPipe);
+			string xmlData = "";
+			xmlData = reader.ReadLine();
 
-			//ss.WaitForConnection();
-			//receivingPipe.WaitForPipeDrain();
+			PacketData packetData = DeserializeFromXML(xmlData);
 
-			//IFormatter formatter = new BinaryFormatter();
-			//receivingData = (PacketData)formatter.Deserialize(receivingPipe);
-
-			/*Debug.Log("Read Data One Loop");
-			Debug.Log("1");
-			if (receivingPipe.CanRead)
+			receivingData = "";
+			foreach (string tempString in packetData.messageLog)
 			{
-				PacketData packetData = (PacketData)xmlSerializer.Deserialize(receivingPipe);
-				Debug.Log("2");
-				receivingData.typingMessage = packetData.typingMessage;
-				Debug.Log("TypingMessage : " + packetData.typingMessage);
-				receivingPipe.Flush();
-			}*/
-
-
-
-			// xml test
-			/*FileStream fileStream = new FileStream("log.xml", FileMode.Create);
-			PacketData dataToSave = new PacketData();
-			dataToSave.typingMessage = "hello!";
-			xmlSerializer.Serialize(fileStream, dataToSave);*/
-
+				receivingData += tempString;
+				receivingData += "\n";
+			}
+			receivingData += packetData.typingMessage;
 		}
-    }
-
-    private void StopReceivingPipe()
-    {
-        Debug.Log("HERE!?");
-        receivingPipe.Close();
-        Debug.Log("HERE2!?");
     }
 
     private void SetReceivingStatus(string status)

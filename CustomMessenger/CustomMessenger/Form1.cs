@@ -18,8 +18,6 @@ namespace CustomMessenger
 {
 	public partial class Form1 : Form
 	{
-		//NamedPipeClientStream recevingPipe;
-
 		Thread sendingThread;
 		NamedPipeClientStream sendingPipe;
 		string sendingPipeName;
@@ -28,7 +26,7 @@ namespace CustomMessenger
 		{
 			InitializeComponent();
 
-			sendingPipeName = "c";
+			sendingPipeName = "hello";
 
 			button1.Click += new EventHandler(this.Button1Click);
 			button2.Click += new EventHandler(this.Button2Click);
@@ -39,12 +37,8 @@ namespace CustomMessenger
 
 		public void ConnectPipe()
 		{
-			XmlSerializer xmlSerializer;
-
 			try
 			{
-				//sendingPipe = new NamedPipeServerStream("PcToUnity", PipeDirection.InOut, 1, PipeTransmissionMode.Message, PipeOptions.Asynchronous, 1024, 1024);
-				//sendingPipe = new NamedPipeServerStream(sendingPipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte);
 				sendingPipe = new NamedPipeClientStream(sendingPipeName);
 			}
 			catch (Exception e)
@@ -52,63 +46,30 @@ namespace CustomMessenger
 				MessageBox.Show("An error has occurred while pipe open.\n" + e.Message);
 				return;
 			}
-			/*IAsyncResult pipeCall = sendingPipe.BeginWaitForConnection(null, null);
-
-			while (!pipeCall.IsCompleted == false)
-			{
-				label1.Text = "Waiting for connection";
-			}
-			sendingPipe.EndWaitForConnection(pipeCall);*/
-			//sendingPipe.WaitForConnection();
-			//while (sendingPipe.IsConnected == false)
-			//{
-
-			//}
 
 			while (!sendingPipe.IsConnected)
 			{
-				//label1.Text = "Waiting";
+				label1.Text = "Waiting";
 				sendingPipe.Connect();
 			}
 
 			int count = 0;
 			while (sendingPipe.IsConnected)
 			{
-				//label1.Text = "Connecting " + count++;
+				label1.Text = "Connecting " + count++;
 				try
 				{
-					/*byte[] dataToSend;
-					dataToSend = Encoding.ASCII.GetBytes(textBox1.Text);
-					sendingPipe.Write(dataToSend, 0, dataToSend.Length);
-					sendingPipe.Flush();
-					sendingPipe.WaitForPipeDrain();*/
-
-					//PacketData dataToSend = new PacketData();
-					//dataToSend.typingMessage = "hello!";
-
-					//IFormatter formatter = new BinaryFormatter();
-					//formatter.Serialize(sendingPipe, dataToSend);
-
 					PacketData dataToSend = new PacketData();
-					dataToSend.typingMessage = "this is test data";
+					dataToSend.messageLog = new List<string>();
+					dataToSend.messageLog.Add("message");
+					dataToSend.messageLog.Add("log");
+					dataToSend.typingMessage = textBox1.Text;
 					string xmlData = SerializeToXml(dataToSend);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
 					writer.Flush();
 
-
-					/*// read data
-					int dataReceive = sendingPipe.ReadByte();*/
-
-					// xml test
-					//FileStream fileStream = new FileStream("log.xml", FileMode.Create);
-					//xmlSerializer.Serialize(fileStream, dataToSend);
-
-					//textBox2.Text = dataToSend.typingMessage;
-					//textBox2.Text = dataToSend.ToString();
-					//string temp = (count++).ToString();
-					//textBox2.Text = temp;
-					Thread.Sleep(1000);
+					//Thread.Sleep(1000);
 				}
 				catch (Exception ex)
 				{
@@ -149,11 +110,16 @@ namespace CustomMessenger
 		{
 			if (sendingPipe.IsConnected)
 				sendingPipe.Close();
+			if (sendingThread.IsAlive)
+				sendingThread.Abort();
 		}
 
 		private void Form1_Closed(object sender, System.EventArgs e)
 		{
-			//count -= 1;
+			if (sendingPipe.IsConnected)
+				sendingPipe.Close();
+			if (sendingThread.IsAlive)
+				sendingThread.Abort();
 		}
 	}
 }
