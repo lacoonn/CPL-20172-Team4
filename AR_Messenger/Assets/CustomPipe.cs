@@ -36,7 +36,8 @@ public class CustomPipe : MonoBehaviour
 	{
 		if (receivingPipe.IsConnected)
 		{
-			ReadData();
+			if (!IsInvoking("ReadData"))
+				Invoke("ReadData", 0.1f);
 		}
 		else
 		{
@@ -78,6 +79,7 @@ public class CustomPipe : MonoBehaviour
 			xmlData = reader.ReadLine();
 			if (xmlData.Length > 0)
 			{
+				Debug.Log(xmlData.Length);
 				PacketData packetData = DeserializeFromXML(xmlData);
 
 				receivingData = "";
@@ -86,6 +88,7 @@ public class CustomPipe : MonoBehaviour
 					receivingData += tempString;
 					receivingData += "\n";
 				}
+				receivingData += "TYPING ==> ";
 				receivingData += packetData.typingMessage;
 			}
 		}
@@ -102,6 +105,7 @@ public class CustomPipe : MonoBehaviour
 		if (receivingPipe.IsConnected)
 			SetReceivingStatus("connected");
 
+		return;
 	}
 
     private void SetReceivingStatus(string status)

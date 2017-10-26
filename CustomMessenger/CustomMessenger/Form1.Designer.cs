@@ -33,6 +33,9 @@
 			this.button1 = new System.Windows.Forms.Button();
 			this.textBox2 = new System.Windows.Forms.TextBox();
 			this.button2 = new System.Windows.Forms.Button();
+			this.label2 = new System.Windows.Forms.Label();
+			this.label3 = new System.Windows.Forms.Label();
+			this.button3 = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// textBox1
@@ -78,11 +81,41 @@
 			this.button2.Text = "Close";
 			this.button2.UseVisualStyleBackColor = true;
 			// 
+			// label2
+			// 
+			this.label2.AutoSize = true;
+			this.label2.Location = new System.Drawing.Point(474, 9);
+			this.label2.Name = "label2";
+			this.label2.Size = new System.Drawing.Size(38, 12);
+			this.label2.TabIndex = 5;
+			this.label2.Text = "label2";
+			// 
+			// label3
+			// 
+			this.label3.AutoSize = true;
+			this.label3.Location = new System.Drawing.Point(249, 9);
+			this.label3.Name = "label3";
+			this.label3.Size = new System.Drawing.Size(38, 12);
+			this.label3.TabIndex = 6;
+			this.label3.Text = "label3";
+			// 
+			// button3
+			// 
+			this.button3.Location = new System.Drawing.Point(437, 341);
+			this.button3.Name = "button3";
+			this.button3.Size = new System.Drawing.Size(75, 23);
+			this.button3.TabIndex = 7;
+			this.button3.Text = "전송";
+			this.button3.UseVisualStyleBackColor = true;
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(524, 474);
+			this.Controls.Add(this.button3);
+			this.Controls.Add(this.label3);
+			this.Controls.Add(this.label2);
 			this.Controls.Add(this.button2);
 			this.Controls.Add(this.textBox2);
 			this.Controls.Add(this.button1);
@@ -102,6 +135,9 @@
 		private System.Windows.Forms.Button button1;
 		private System.Windows.Forms.TextBox textBox2;
 		private System.Windows.Forms.Button button2;
+		private System.Windows.Forms.Label label2;
+		private System.Windows.Forms.Label label3;
+		private System.Windows.Forms.Button button3;
 	}
 }
 

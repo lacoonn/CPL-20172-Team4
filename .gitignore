@@ -1,2 +1,6 @@
 AR_Messenger/.vs/
+AR_Messenger/Temp/
+
 CustomMessenger/.vs/
+CustomMessenger/CustomMessenger/bin
+CustomMessenger/CustomMessenger/obj

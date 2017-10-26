@@ -21,6 +21,7 @@ namespace CustomMessenger
 		Thread sendingThread;
 		NamedPipeClientStream sendingPipe;
 		string sendingPipeName;
+		PacketData dataToSend;
 
 		public Form1()
 		{
@@ -28,8 +29,13 @@ namespace CustomMessenger
 
 			sendingPipeName = "hello";
 
+			dataToSend = new PacketData();
+			dataToSend.messageLog = new List<string>();
+			dataToSend.messageLog.Add("message log");
+
 			button1.Click += new EventHandler(this.Button1Click);
 			button2.Click += new EventHandler(this.Button2Click);
+			button3.Click += new EventHandler(this.Button3Click);
 
 			sendingThread = new Thread(ConnectPipe);
 			sendingThread.Start();
@@ -59,17 +65,13 @@ namespace CustomMessenger
 				label1.Text = "Connecting " + count++;
 				try
 				{
-					PacketData dataToSend = new PacketData();
-					dataToSend.messageLog = new List<string>();
-					dataToSend.messageLog.Add("message");
-					dataToSend.messageLog.Add("log");
 					dataToSend.typingMessage = textBox1.Text;
 					string xmlData = SerializeToXml(dataToSend);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
 					writer.Flush();
 
-					//Thread.Sleep(1000);
+					label3.Text = dataToSend.typingMessage;
 				}
 				catch (Exception ex)
 				{
@@ -79,6 +81,7 @@ namespace CustomMessenger
 						return;
 					}
 				}
+				Thread.Sleep(100);
 			}
 			sendingPipe.Close();
 		}
@@ -101,17 +104,23 @@ namespace CustomMessenger
 		}
 
 		// send button click
-		private void Button1Click(object sender, EventArgs e)
+		public void Button1Click(object sender, EventArgs e)
 		{
 			
 		}
 
-		private void Button2Click(object sender, EventArgs e)
+		public void Button2Click(object sender, EventArgs e)
 		{
 			if (sendingPipe.IsConnected)
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
+		}
+
+		public void Button3Click(object sender, EventArgs e)
+		{
+			dataToSend.messageLog.Add(textBox1.Text);
+			textBox1.Text = "";
 		}
 
 		private void Form1_Closed(object sender, System.EventArgs e)
