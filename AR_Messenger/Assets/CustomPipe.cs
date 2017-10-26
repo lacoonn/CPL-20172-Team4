@@ -6,6 +6,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
 using System.IO;
+using System.Threading;
 
 public class CustomPipe : MonoBehaviour
 {
@@ -18,13 +19,17 @@ public class CustomPipe : MonoBehaviour
     string sendingStatus;
     string sendingData;
 
+	Thread thread;
 
     // Use this for initialization
     void Start()
     {
 		receivingPipe = new NamedPipeServerStream(receivingPipeName);
-		receivingData = "Initial!";
+		receivingData = "Initial data";
 		SetReceivingStatus("Not connected");
+
+		thread = new Thread(WaitForConnect);
+		thread.Start();
 	}
 
 	private void FixedUpdate()
@@ -35,9 +40,7 @@ public class CustomPipe : MonoBehaviour
 		}
 		else
 		{
-			System.IAsyncResult async = receivingPipe.BeginWaitForConnection(null, null);
-			Debug.Log("Between async");
-			receivingPipe.EndWaitForConnection(async);
+			
 		}
 	}
 
@@ -49,7 +52,8 @@ public class CustomPipe : MonoBehaviour
 
 	private void OnApplicationQuit()
 	{
-		receivingPipe.Close();
+		if (receivingPipe.IsConnected)
+			receivingPipe.Close();
 	}
 
 	public static PacketData DeserializeFromXML(string xmlData)
@@ -72,18 +76,33 @@ public class CustomPipe : MonoBehaviour
 			StreamReader reader = new StreamReader(receivingPipe);
 			string xmlData = "";
 			xmlData = reader.ReadLine();
-
-			PacketData packetData = DeserializeFromXML(xmlData);
-
-			receivingData = "";
-			foreach (string tempString in packetData.messageLog)
+			if (xmlData.Length > 0)
 			{
-				receivingData += tempString;
-				receivingData += "\n";
+				PacketData packetData = DeserializeFromXML(xmlData);
+
+				receivingData = "";
+				foreach (string tempString in packetData.messageLog)
+				{
+					receivingData += tempString;
+					receivingData += "\n";
+				}
+				receivingData += packetData.typingMessage;
 			}
-			receivingData += packetData.typingMessage;
 		}
     }
+
+	private void WaitForConnect()
+	{
+		/*System.IAsyncResult async = receivingPipe.BeginWaitForConnection(null, null);
+		Debug.Log("Between async");
+		receivingPipe.EndWaitForConnection(async);*/
+		Debug.Log("Wait start");
+		receivingPipe.WaitForConnection();
+		Debug.Log("Wait end");
+		if (receivingPipe.IsConnected)
+			SetReceivingStatus("connected");
+
+	}
 
     private void SetReceivingStatus(string status)
     {
