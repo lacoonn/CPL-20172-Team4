@@ -36,6 +36,7 @@ namespace CustomMessenger
 			button1.Click += new EventHandler(this.Button1Click);
 			button2.Click += new EventHandler(this.Button2Click);
 			button3.Click += new EventHandler(this.Button3Click);
+			button4.Click += new EventHandler(this.Button4Click);
 
 			sendingThread = new Thread(ConnectPipe);
 			sendingThread.Start();
@@ -63,15 +64,20 @@ namespace CustomMessenger
 			while (sendingPipe.IsConnected)
 			{
 				label1.Text = "Connecting " + count++;
+				count = count % 10000;
 				try
 				{
+					textBox2.Text = "";
+					foreach (string tempString in dataToSend.messageLog)
+					{
+						textBox2.Text += tempString;
+						textBox2.Text += "\r\n";
+					}
 					dataToSend.typingMessage = textBox1.Text;
 					string xmlData = SerializeToXml(dataToSend);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
 					writer.Flush();
-
-					label3.Text = dataToSend.typingMessage;
 				}
 				catch (Exception ex)
 				{
@@ -115,12 +121,18 @@ namespace CustomMessenger
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
+			label2.Text = "Closed";
 		}
 
 		public void Button3Click(object sender, EventArgs e)
 		{
 			dataToSend.messageLog.Add(textBox1.Text);
 			textBox1.Text = "";
+		}
+
+		public void Button4Click(object sender, EventArgs e)
+		{
+
 		}
 
 		private void Form1_Closed(object sender, System.EventArgs e)

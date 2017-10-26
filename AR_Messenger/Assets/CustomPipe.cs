@@ -41,7 +41,7 @@ public class CustomPipe : MonoBehaviour
 		}
 		else
 		{
-			
+			Debug.Log("Not connected");
 		}
 	}
 
@@ -75,11 +75,11 @@ public class CustomPipe : MonoBehaviour
 		if (receivingPipe.IsConnected)
 		{
 			StreamReader reader = new StreamReader(receivingPipe);
-			string xmlData = "";
+			string xmlData;
 			xmlData = reader.ReadLine();
-			if (xmlData.Length > 0)
+			if (xmlData != null)
 			{
-				Debug.Log(xmlData.Length);
+				Debug.Log(xmlData);
 				PacketData packetData = DeserializeFromXML(xmlData);
 
 				receivingData = "";

@@ -227,6 +227,7 @@
     <Compile Include="Assets\pipe.cs" />
     <Compile Include="Assets\SimChat\testExtendClass.cs" />
     <Compile Include="Assets\SimChat\testTwoChat.cs" />
+    <Compile Include="Assets\Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Assets\SimChat\readme.txt" />
