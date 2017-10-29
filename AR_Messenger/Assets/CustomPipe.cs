@@ -36,8 +36,11 @@ public class CustomPipe : MonoBehaviour
 	{
 		if (receivingPipe.IsConnected)
 		{
-			if (!IsInvoking("ReadData"))
-				Invoke("ReadData", 0.1f);
+			if (thread.IsAlive == false)
+			{
+				thread = new Thread(WaitForConnect);
+				thread.Start();
+			}
 		}
 		else
 		{
@@ -96,14 +99,16 @@ public class CustomPipe : MonoBehaviour
 
 	private void WaitForConnect()
 	{
-		/*System.IAsyncResult async = receivingPipe.BeginWaitForConnection(null, null);
-		Debug.Log("Between async");
-		receivingPipe.EndWaitForConnection(async);*/
 		Debug.Log("Wait start");
 		receivingPipe.WaitForConnection();
 		Debug.Log("Wait end");
 		if (receivingPipe.IsConnected)
 			SetReceivingStatus("connected");
+
+		while (receivingPipe.IsConnected)
+		{
+			ReadData();
+		}
 
 		return;
 	}
