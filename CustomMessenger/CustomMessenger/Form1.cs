@@ -8,10 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO.Pipes;
 using System.Threading;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml.Serialization;
-using System.Xml;
 using System.IO;
 
 namespace CustomMessenger
@@ -30,8 +27,7 @@ namespace CustomMessenger
 			sendingPipeName = "hello";
 
 			dataToSend = new PacketData();
-			dataToSend.messageLog = new List<string>();
-			dataToSend.messageLog.Add("message log");
+			dataToSend.messageLog = new List<PacketData.Message>();
 
 			button1.Click += new EventHandler(this.Button1Click);
 			button2.Click += new EventHandler(this.Button2Click);
@@ -68,12 +64,14 @@ namespace CustomMessenger
 				try
 				{
 					textBox2.Text = "";
-					foreach (string tempString in dataToSend.messageLog)
+					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
 					{
-						textBox2.Text += tempString;
+						if (tempMessage.isMe)
+							textBox2.Text += tempMessage.text;
+						else
+							textBox2.Text += "\t" + tempMessage.text;
 						textBox2.Text += "\r\n";
 					}
-					dataToSend.typingMessage = textBox1.Text;
 					string xmlData = SerializeToXml(dataToSend);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
@@ -126,13 +124,21 @@ namespace CustomMessenger
 
 		public void Button3Click(object sender, EventArgs e)
 		{
-			dataToSend.messageLog.Add(textBox1.Text);
+			// 전송 버튼
+			PacketData.Message temp;
+			temp.text = textBox1.Text;
+			temp.isMe = true;
+			dataToSend.messageLog.Add(temp);
 			textBox1.Text = "";
 		}
 
 		public void Button4Click(object sender, EventArgs e)
 		{
-
+			// 외부 알림 수신 버튼
+			PacketData.Message temp;
+			temp.text = "This is external message";
+			temp.isMe = false;
+			dataToSend.messageLog.Add(temp);
 		}
 
 		private void Form1_Closed(object sender, System.EventArgs e)

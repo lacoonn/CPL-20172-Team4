@@ -7,10 +7,14 @@ using System.Runtime.Serialization;
 [Serializable]
 public class PacketData
 {
+	public struct Message
+	{
+		public string text;
+		public bool isMe;// 로그에서 내가 보낸 메시지인지 저장
+	}
 	public bool hasNewMessage;
 	public string newMessage;
 
-	public List<string> messageLog; // 메세지 기록, 과거부터 현재까지 순서로
-	public string typingMessage; // 현재 작성 중인 채팅
+	public List<Message> messageLog; // 메세지 기록, 과거부터 현재까지 순서로
 }
 

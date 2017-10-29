@@ -57,7 +57,16 @@ public class CustomPipe : MonoBehaviour
 	private void OnApplicationQuit()
 	{
 		if (receivingPipe.IsConnected)
+		{
 			receivingPipe.Close();
+			Debug.Log("Pipe closed in Quit Event");
+		}
+		if (thread.IsAlive)
+		{
+			thread.Abort();
+			Debug.Log("Thread closed in Quit Event");
+		}
+		Debug.Log("End Quit Event");
 	}
 
 	public static PacketData DeserializeFromXML(string xmlData)
@@ -86,13 +95,14 @@ public class CustomPipe : MonoBehaviour
 				PacketData packetData = DeserializeFromXML(xmlData);
 
 				receivingData = "";
-				foreach (string tempString in packetData.messageLog)
+				foreach (PacketData.Message tempMessage in packetData.messageLog)
 				{
-					receivingData += tempString;
+					if (tempMessage.isMe)
+						receivingData += tempMessage.text;
+					else
+						receivingData += "\t" + tempMessage.text;
 					receivingData += "\n";
 				}
-				receivingData += "TYPING ==> ";
-				receivingData += packetData.typingMessage;
 			}
 		}
     }
