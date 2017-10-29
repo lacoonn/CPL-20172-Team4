@@ -16,33 +16,30 @@ namespace CustomMessenger
 	public partial class Form1 : Form
 	{
 		Thread sendingThread;
+		Thread receivingThread;
+
 		NamedPipeClientStream sendingPipe;
+		NamedPipeServerStream receivingPipe;
+
 		string sendingPipeName;
-		PacketData dataToSend;
+		string receivingPipeName;
+
+		PacketData packetData;
 
 		public Form1()
 		{
 			InitializeComponent();
 
-			sendingPipeName = "hello";
+			sendingPipeName = "wtou";
+			receivingPipeName = "utow";
 
-			dataToSend = new PacketData();
-			dataToSend.messageLog = new List<PacketData.Message>();
+			packetData = new PacketData();
+			packetData.messageLog = new List<PacketData.Message>();
 
-			button1.Click += new EventHandler(this.Button1Click);
-			button2.Click += new EventHandler(this.Button2Click);
-			button3.Click += new EventHandler(this.Button3Click);
-			button4.Click += new EventHandler(this.Button4Click);
-
-			sendingThread = new Thread(ConnectPipe);
-			sendingThread.Start();
-		}
-
-		public void ConnectPipe()
-		{
 			try
 			{
 				sendingPipe = new NamedPipeClientStream(sendingPipeName);
+				receivingPipe = new NamedPipeServerStream(receivingPipeName);
 			}
 			catch (Exception e)
 			{
@@ -50,21 +47,45 @@ namespace CustomMessenger
 				return;
 			}
 
+			button1.Click += new EventHandler(this.Button1Click);
+			button2.Click += new EventHandler(this.Button2Click);
+			button3.Click += new EventHandler(this.Button3Click);
+			button4.Click += new EventHandler(this.Button4Click);
+
+			sendingThread = new Thread(ConnectSendingPipe);
+			sendingThread.Start();
+			receivingThread = new Thread(ConnectReceivingPipe);
+			receivingThread.Start();
+		}
+
+		public void ConnectSendingPipe()
+		{
+			label1.Text = "Not connected";
 			while (!sendingPipe.IsConnected)
 			{
 				label1.Text = "Waiting";
 				sendingPipe.Connect();
 			}
+		}
 
-			/*int count = 0;
-			while (sendingPipe.IsConnected)
+		public void ConnectReceivingPipe()
+		{
+			label2.Text = "Not connected";
+			receivingPipe.WaitForConnection();
+
+			while (receivingPipe.IsConnected)
 			{
-				label1.Text = "Connecting " + count++;
-				count = count % 10000;
-				try
+				label2.Text = "Wait data";
+				StreamReader reader = new StreamReader(receivingPipe);
+				string xmlData;
+				xmlData = reader.ReadLine();
+				if (xmlData != null)
 				{
+					label2.Text = "Receive data";
+					packetData = DeserializeFromXML(xmlData);
+
 					textBox2.Text = "";
-					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
+					foreach (PacketData.Message tempMessage in packetData.messageLog)
 					{
 						if (tempMessage.isMe)
 							textBox2.Text += tempMessage.text;
@@ -72,21 +93,8 @@ namespace CustomMessenger
 							textBox2.Text += "\t" + tempMessage.text;
 						textBox2.Text += "\r\n";
 					}
-					string xmlData = SerializeToXml(dataToSend);
-					StreamWriter writer = new StreamWriter(sendingPipe);
-					writer.WriteLine(xmlData);
-					writer.Flush();
 				}
-				catch (Exception ex)
-				{
-					if (!ex.Message.StartsWith("Pipe is broken."))
-					{
-						MessageBox.Show("An error has occurred while seding data. \n" + ex.Message);
-						return;
-					}
-				}
-				Thread.Sleep(100);
-			}*/
+			}
 		}
 
 		public static string SerializeToXml(PacketData data)
@@ -106,6 +114,19 @@ namespace CustomMessenger
 			return xmlData;
 		}
 
+		public static PacketData DeserializeFromXML(string xmlData)
+		{
+			PacketData data = null;
+
+			StringReader stringReader = null;
+
+			XmlSerializer deserializer = new XmlSerializer(typeof(PacketData));
+			stringReader = new StringReader(xmlData);
+			data = (PacketData)deserializer.Deserialize(stringReader);
+
+			return data;
+		}
+
 		// send button click
 		public void Button1Click(object sender, EventArgs e)
 		{
@@ -118,6 +139,11 @@ namespace CustomMessenger
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
+
+			if (receivingPipe.IsConnected)
+				receivingPipe.Close();
+			if (receivingThread.IsAlive)
+				receivingThread.Abort();
 			label2.Text = "Closed";
 		}
 
@@ -127,7 +153,7 @@ namespace CustomMessenger
 			PacketData.Message temp;
 			temp.text = textBox1.Text;
 			temp.isMe = true;
-			dataToSend.messageLog.Add(temp);
+			packetData.messageLog.Add(temp);
 			textBox1.Text = "";
 
 			if (sendingPipe.IsConnected)
@@ -136,7 +162,7 @@ namespace CustomMessenger
 				{
 					// 로그 텍스트박스 업데이트
 					textBox2.Text = "";
-					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
+					foreach (PacketData.Message tempMessage in packetData.messageLog)
 					{
 						if (tempMessage.isMe)
 							textBox2.Text += tempMessage.text;
@@ -145,7 +171,7 @@ namespace CustomMessenger
 						textBox2.Text += "\r\n";
 					}
 					// 데이터 전송
-					string xmlData = SerializeToXml(dataToSend);
+					string xmlData = SerializeToXml(packetData);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
 					writer.Flush();
@@ -167,7 +193,7 @@ namespace CustomMessenger
 			PacketData.Message temp;
 			temp.text = "This is external message";
 			temp.isMe = false;
-			dataToSend.messageLog.Add(temp);
+			packetData.messageLog.Add(temp);
 
 			if (sendingPipe.IsConnected)
 			{
@@ -175,7 +201,7 @@ namespace CustomMessenger
 				{
 					// 로그 텍스트박스 업데이트
 					textBox2.Text = "";
-					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
+					foreach (PacketData.Message tempMessage in packetData.messageLog)
 					{
 						if (tempMessage.isMe)
 							textBox2.Text += tempMessage.text;
@@ -184,7 +210,7 @@ namespace CustomMessenger
 						textBox2.Text += "\r\n";
 					}
 					// 데이터 전송
-					string xmlData = SerializeToXml(dataToSend);
+					string xmlData = SerializeToXml(packetData);
 					StreamWriter writer = new StreamWriter(sendingPipe);
 					writer.WriteLine(xmlData);
 					writer.Flush();
@@ -206,6 +232,11 @@ namespace CustomMessenger
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
+
+			if (receivingPipe.IsConnected)
+				receivingPipe.Close();
+			if (receivingThread.IsAlive)
+				receivingThread.Abort();
 		}
 	}
 }
