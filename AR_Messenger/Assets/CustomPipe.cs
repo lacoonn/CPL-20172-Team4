@@ -40,6 +40,7 @@ public class CustomPipe : MonoBehaviour
 			{
 				thread = new Thread(WaitForConnect);
 				thread.Start();
+				Debug.Log("Thread restart");
 			}
 		}
 		else
@@ -91,7 +92,6 @@ public class CustomPipe : MonoBehaviour
 			xmlData = reader.ReadLine();
 			if (xmlData != null)
 			{
-				Debug.Log(xmlData);
 				PacketData packetData = DeserializeFromXML(xmlData);
 
 				receivingData = "";

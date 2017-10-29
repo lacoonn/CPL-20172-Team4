@@ -56,7 +56,7 @@ namespace CustomMessenger
 				sendingPipe.Connect();
 			}
 
-			int count = 0;
+			/*int count = 0;
 			while (sendingPipe.IsConnected)
 			{
 				label1.Text = "Connecting " + count++;
@@ -86,8 +86,7 @@ namespace CustomMessenger
 					}
 				}
 				Thread.Sleep(100);
-			}
-			sendingPipe.Close();
+			}*/
 		}
 
 		public static string SerializeToXml(PacketData data)
@@ -130,6 +129,36 @@ namespace CustomMessenger
 			temp.isMe = true;
 			dataToSend.messageLog.Add(temp);
 			textBox1.Text = "";
+
+			if (sendingPipe.IsConnected)
+			{
+				try
+				{
+					// 로그 텍스트박스 업데이트
+					textBox2.Text = "";
+					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
+					{
+						if (tempMessage.isMe)
+							textBox2.Text += tempMessage.text;
+						else
+							textBox2.Text += "\t" + tempMessage.text;
+						textBox2.Text += "\r\n";
+					}
+					// 데이터 전송
+					string xmlData = SerializeToXml(dataToSend);
+					StreamWriter writer = new StreamWriter(sendingPipe);
+					writer.WriteLine(xmlData);
+					writer.Flush();
+				}
+				catch (Exception ex)
+				{
+					if (!ex.Message.StartsWith("Pipe is broken."))
+					{
+						MessageBox.Show("An error has occurred while seding data. \n" + ex.Message);
+						return;
+					}
+				}
+			}
 		}
 
 		public void Button4Click(object sender, EventArgs e)
@@ -139,6 +168,36 @@ namespace CustomMessenger
 			temp.text = "This is external message";
 			temp.isMe = false;
 			dataToSend.messageLog.Add(temp);
+
+			if (sendingPipe.IsConnected)
+			{
+				try
+				{
+					// 로그 텍스트박스 업데이트
+					textBox2.Text = "";
+					foreach (PacketData.Message tempMessage in dataToSend.messageLog)
+					{
+						if (tempMessage.isMe)
+							textBox2.Text += tempMessage.text;
+						else
+							textBox2.Text += "\t" + tempMessage.text;
+						textBox2.Text += "\r\n";
+					}
+					// 데이터 전송
+					string xmlData = SerializeToXml(dataToSend);
+					StreamWriter writer = new StreamWriter(sendingPipe);
+					writer.WriteLine(xmlData);
+					writer.Flush();
+				}
+				catch (Exception ex)
+				{
+					if (!ex.Message.StartsWith("Pipe is broken."))
+					{
+						MessageBox.Show("An error has occurred while seding data. \n" + ex.Message);
+						return;
+					}
+				}
+			}
 		}
 
 		private void Form1_Closed(object sender, System.EventArgs e)
