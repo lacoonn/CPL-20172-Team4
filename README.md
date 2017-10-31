@@ -1,6 +1,6 @@
 # PC_AR_Messenger
 You must import the following sdk(asset)  
-..*HTC.UnityPlugin  
-..*Plugins  
-..*SteamVR  
-..*Viveport
+1. HTC.UnityPlugin  
+2. Plugins  
+3. SteamVR  
+4. Viveport
