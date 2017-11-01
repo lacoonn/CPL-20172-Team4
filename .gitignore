@@ -3,10 +3,10 @@ AR_Messenger/Temp/
 
 AR_dynamic_alarm/.vs/
 AR_dynamic_alarm/Temp/
-AR_dynamic_alarm/Assets/HTC.UnityPlugin
-AR_dynamic_alarm/Assets/Plugins
-AR_dynamic_alarm/Assets/SteamVR
-AR_dynamic_alarm/Assets/Viveport
+#AR_dynamic_alarm/Assets/HTC.UnityPlugin
+#AR_dynamic_alarm/Assets/Plugins
+#AR_dynamic_alarm/Assets/SteamVR
+#AR_dynamic_alarm/Assets/Viveport
 
 CustomMessenger/.vs/
 CustomMessenger/CustomMessenger/bin
