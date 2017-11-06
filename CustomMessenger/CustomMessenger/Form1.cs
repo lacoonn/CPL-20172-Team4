@@ -25,6 +25,8 @@ namespace CustomMessenger
 		NamedPipeClientStream sendingPipe;
 		NamedPipeServerStream receivingPipe;
 
+		Socket server;
+		Socket connectedClient;
 		Socket client;
 
 		string sendingPipeName;
@@ -147,34 +149,39 @@ namespace CustomMessenger
 		{
 			string myPort = textBox3.Text; // 내 포트 번호
 			IPEndPoint ipep = new IPEndPoint(IPAddress.Any, Int32.Parse(myPort));
-			Socket server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			server = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
 			server.Bind(ipep);
 			label3.Text = "Server:Listen";
-			server.Listen(20);
+			server.Listen(1);
 			label3.Text = "Server:Listening";
 
-			Socket connectedClient = server.Accept();
+			connectedClient = server.Accept();
 			label3.Text = "Server:Accept";
 			isMessengerServerConnected = true;
 			while (isMessengerServerConnected)
 			{
 				IPEndPoint ip = (IPEndPoint)connectedClient.RemoteEndPoint;
-				// "주소 {0}에서 접속", ip.Address
+				//label3.Text = "Server:" + ip.Address;
 
-				String _buf = "명월 서버에 오신 걸 환영합니다.";
-				Byte[] _data = Encoding.Default.GetBytes(_buf);
-				//client.Send(_data);
-				_data = new Byte[1024];
-				connectedClient.Receive(_data);
-				_buf = Encoding.Default.GetString(_data);
-				AddMessageLog(_buf, false);
-				// _buf 출력
-				label3.Text = "Server:Receve message";
+				String _buf;
+				Byte[] _data = new Byte[1024];
+				int result = connectedClient.Receive(_data);
+				if (result > 0)
+				{
+					_buf = Encoding.Default.GetString(_data);
+					AddMessageLog(_buf, false);
+					label3.Text = "Server:Receve message";
+				}
+				else
+				{
+					label3.Text = "Result : " + result.ToString();
+				}
 			}
 			label3.Text = "Server:End";
 			connectedClient.Close();
 			server.Close();
+			isMessengerServerConnected = false;
 		}
 
 		public void MessengerClient()
@@ -203,22 +210,14 @@ namespace CustomMessenger
 			}
 			label4.Text = "Client:connect";
 
-			/*Byte[] _data = new Byte[1024];
-			//client.Receive(_data);
-			String _buf = Encoding.Default.GetString(_data);
-			// Console.WriteLine(_buf);
-			_buf = "소켓 접속 확인 됐습니다.";
-			_data = Encoding.Default.GetBytes(_buf);
-			client.Send(_data);*/
-
 			while (isMessengerClientConnected)
 			{
-				Thread.Sleep(1000);
+				Thread.Sleep(100);
 			}
 
+			label4.Text = "Client:End";
 			client.Close();
-
-			// 종료 확인
+			isMessengerClientConnected = false;
 		}
 
 		public void AddMessageLog(string message, bool isInternal)
@@ -250,9 +249,10 @@ namespace CustomMessenger
 			messengerServerThread.Start();
 		}
 
+		// 종료 버튼
 		public void Button2Click(object sender, EventArgs e)
 		{
-			if (sendingPipe.IsConnected)
+			/*if (sendingPipe.IsConnected)
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
@@ -260,12 +260,22 @@ namespace CustomMessenger
 			if (receivingPipe.IsConnected)
 				receivingPipe.Close();
 			if (receivingThread.IsAlive)
-				receivingThread.Abort();
+				receivingThread.Abort();*/
 
-			isMessengerClientConnected = false;
-			isMessengerServerConnected = false;
-
-			label2.Text = "Closed";
+			if (isMessengerClientConnected)
+			{
+				isMessengerClientConnected = false;
+				client.Close();
+				messengerClientThread.Abort();
+				
+			}
+			if (isMessengerServerConnected)
+			{
+				isMessengerServerConnected = false;
+				connectedClient.Close();
+				server.Close();
+				messengerServerThread.Abort();
+			}
 		}
 
 		// 전송 버튼
@@ -286,9 +296,8 @@ namespace CustomMessenger
 				client.Send(_data);
 			}
 
-			// AR로 데이터 전송
-			//if (sendingPipe.IsConnected && receivingPipe.IsConnected)
-			if (isSendingPipeConnected && isReceivingPipeConnected)
+			/*// AR로 데이터 전송
+			if (sendingPipe.IsConnected && receivingPipe.IsConnected)
 			{
 				if (sendingPipe.IsConnected)
 				{
@@ -309,7 +318,7 @@ namespace CustomMessenger
 						}
 					}
 				}
-			}
+			}*/
 		}
 
 		// 외부 알림 수신 버튼
@@ -353,7 +362,7 @@ namespace CustomMessenger
 
 		private void Form1_Closed(object sender, System.EventArgs e)
 		{
-			if (sendingPipe.IsConnected)
+			/*if (sendingPipe.IsConnected)
 				sendingPipe.Close();
 			if (sendingThread.IsAlive)
 				sendingThread.Abort();
@@ -361,10 +370,22 @@ namespace CustomMessenger
 			if (receivingPipe.IsConnected)
 				receivingPipe.Close();
 			if (receivingThread.IsAlive)
-				receivingThread.Abort();
+				receivingThread.Abort();*/
 
-			isMessengerClientConnected = false;
-			isMessengerServerConnected = false;
+			if (isMessengerClientConnected)
+			{
+				isMessengerClientConnected = false;
+				client.Close();
+				messengerClientThread.Abort();
+
+			}
+			if (isMessengerServerConnected)
+			{
+				isMessengerServerConnected = false;
+				connectedClient.Close();
+				server.Close();
+				messengerServerThread.Abort();
+			}
 		}
 	}
 }
