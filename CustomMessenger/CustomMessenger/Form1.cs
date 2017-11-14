@@ -105,7 +105,7 @@ namespace CustomMessenger
 					"user",
 					CancellationToken.None,
 					new FileDataStore(credPath, true)).Result;
-				Console.WriteLine("Credential file saved to: " + credPath);
+				WriteTextBox2("Credential file saved to: " + credPath);
 			}
 
 			// Create Google Calendar API service.
@@ -125,25 +125,47 @@ namespace CustomMessenger
 
 			// List events.
 			Events events = request.Execute();
-			Console.WriteLine("Upcoming events:");
+			WriteTextBox2("Upcoming events >>");
 			if (events.Items != null && events.Items.Count > 0)
 			{
 				foreach (var eventItem in events.Items)
 				{
 					string when = eventItem.Start.DateTime.ToString();
-					if (String.IsNullOrEmpty(when))
+					if (String.IsNullOrEmpty(when)) // 종일로 설정되어 있을 경우
 					{
 						when = eventItem.Start.Date;
+						DateTime dateTime;
+						
+						if (DateTime.TryParse(when, out dateTime))
+						{
+							TimeSpan timeDiff = dateTime - DateTime.Now;
+							WriteTextBox2(eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
+
+							//--
+							//WriteTextBox2(eventItem.Summary + " // Date: " + dateTime.ToString());
+							//--
+						}
+						else
+						{
+							WriteTextBox2("Date Error");
+						}
 					}
-					Console.WriteLine("{0} ({1})", eventItem.Summary, when);
-					//--
-					textBox2.Text += (eventItem.Summary + ", " + when + "\r\n");
-					//--
+					else // 정확한 시간이 설정되어 있을 경우
+					{
+						DateTime dateTime = eventItem.Start.DateTime.Value;
+
+						TimeSpan timeDiff = dateTime - DateTime.Now;
+						WriteTextBox2(eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
+
+						//--
+						//WriteTextBox2(eventItem.Summary + " // DateTime " + dateTime.ToString());
+						//--
+					}
 				}
 			}
 			else
 			{
-				Console.WriteLine("No upcoming events found.");
+				textBox2.Text +=("No upcoming events found.");
 			}
 			Console.Read();
 		}
@@ -290,6 +312,12 @@ namespace CustomMessenger
 			label4.Text = "Client:End";
 			client.Close();
 			isMessengerClientConnected = false;
+		}
+
+		public void WriteTextBox2(string message)
+		{
+			textBox2.Text += message;
+			textBox2.Text += "\r\n";
 		}
 
 		public void AddMessageLog(string message, bool isInternal)
