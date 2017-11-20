@@ -49,6 +49,7 @@ namespace CustomMessenger
 		// Google Calendar
 		static string[] Scopes = { CalendarService.Scope.CalendarReadonly };
 		static string ApplicationName = "Google Calendar API .NET Quickstart";
+		static List<string> eventIdList = new List<string>();
 
 		public Form1()
 		{
@@ -75,6 +76,7 @@ namespace CustomMessenger
 			button2.Click += new EventHandler(this.Button2Click);
 			button3.Click += new EventHandler(this.Button3Click);
 			button4.Click += new EventHandler(this.Button4Click);
+			FormClosing += Form1_Closing;
 
 			/*sendingThread = new Thread(ConnectSendingPipe);
 			sendingThread.Start();
@@ -92,82 +94,156 @@ namespace CustomMessenger
 
 		public void GoogleCalendar()
 		{
-			UserCredential credential;
-
-			using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
+			while (true)
 			{
-				string credPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal);
-				credPath = Path.Combine(credPath, ".credentials/calendar-dotnot-quickstart.json");
+				UserCredential credential;
 
-				credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-					GoogleClientSecrets.Load(stream).Secrets,
-					Scopes,
-					"user",
-					CancellationToken.None,
-					new FileDataStore(credPath, true)).Result;
-				WriteTextBox2("Credential file saved to: " + credPath);
-			}
-
-			// Create Google Calendar API service.
-			var service = new CalendarService(new BaseClientService.Initializer()
-			{
-				HttpClientInitializer = credential,
-				ApplicationName = ApplicationName,
-			});
-
-			// Define parameters of request.
-			EventsResource.ListRequest request = service.Events.List("primary");
-			request.TimeMin = DateTime.Now;
-			request.ShowDeleted = false;
-			request.SingleEvents = true;
-			request.MaxResults = 10;
-			request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
-
-			// List events.
-			Events events = request.Execute();
-			WriteTextBox2("Upcoming events >>");
-			if (events.Items != null && events.Items.Count > 0)
-			{
-				foreach (var eventItem in events.Items)
+				using (var stream = new FileStream("client_secret.json", FileMode.Open, FileAccess.Read))
 				{
-					string when = eventItem.Start.DateTime.ToString();
-					if (String.IsNullOrEmpty(when)) // 종일로 설정되어 있을 경우
+					string credPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal);
+					credPath = Path.Combine(credPath, ".credentials/calendar-dotnot-quickstart.json");
+
+					credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+						GoogleClientSecrets.Load(stream).Secrets,
+						Scopes,
+						"user",
+						CancellationToken.None,
+						new FileDataStore(credPath, true)).Result;
+					//WriteTextBox2("Credential file saved to: " + credPath);
+				}
+
+				// Create Google Calendar API service.
+				var service = new CalendarService(new BaseClientService.Initializer()
+				{
+					HttpClientInitializer = credential,
+					ApplicationName = ApplicationName,
+				});
+
+				// Define parameters of request.
+				EventsResource.ListRequest request = service.Events.List("primary");
+				request.TimeMin = DateTime.Now;
+				request.ShowDeleted = false;
+				request.SingleEvents = true;
+				request.MaxResults = 10;
+				request.OrderBy = EventsResource.ListRequest.OrderByEnum.StartTime;
+
+				// List events.
+				Events events = request.Execute();
+				//WriteTextBox2("Upcoming events >>");
+				if (events.Items != null && events.Items.Count > 0)
+				{
+					foreach (var eventItem in events.Items)
 					{
-						when = eventItem.Start.Date;
-						DateTime dateTime;
-						
-						if (DateTime.TryParse(when, out dateTime))
+						string when = eventItem.Start.DateTime.ToString();
+						if (String.IsNullOrEmpty(when)) // 종일로 설정되어 있을 경우
 						{
+							when = eventItem.Start.Date;
+							DateTime dateTime;
+
+							if (DateTime.TryParse(when, out dateTime))
+							{
+								TimeSpan timeDiff = dateTime - DateTime.Now;
+								// 이벤트 시간 파싱을 성공했을 경우(여기에 필요한 행위가 들어감)
+								//WriteTextBox2(eventItem.Id + " _ " + eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
+
+								// eventItem.OriginalStartTime = 반복 이벤트
+
+								if (0 <= timeDiff.TotalMinutes && timeDiff.TotalMinutes <= 60)
+								{
+									bool isItemExist = false;
+									foreach (string eventIdItem in eventIdList)
+									{
+										if(eventItem.Id.Equals(eventIdItem))
+										{
+											isItemExist = true;
+											break;
+										}
+									}
+									if (isItemExist)
+									{
+										// Pass
+									}
+									else
+									{
+										eventIdList.Add(eventItem.Id);
+										SendCalendarAlarmToAr(eventItem.Summary); // 캘린더 알림 AR로 전송
+									}
+								}
+							}
+							else
+							{
+								WriteTextBox2("Date Error");
+							}
+						}
+						else // 정확한 시간이 설정되어 있을 경우
+						{
+							DateTime dateTime = eventItem.Start.DateTime.Value;
 							TimeSpan timeDiff = dateTime - DateTime.Now;
-							WriteTextBox2(eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
+							// 이벤트 시간 파싱을 성공했을 경우(여기에 필요한 행위가 들어감)
+							//WriteTextBox2(eventItem.Id + " _ " + eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
 
-							//--
-							//WriteTextBox2(eventItem.Summary + " // Date: " + dateTime.ToString());
-							//--
+							// eventItem.OriginalStartTime = 반복 이벤트
+
+							if (0 <= timeDiff.TotalMinutes && timeDiff.TotalMinutes <= 60)
+							{
+								bool isItemExist = false;
+								foreach (string eventIdItem in eventIdList)
+								{
+									if (eventItem.Id.Equals(eventIdItem))
+									{
+										isItemExist = true;
+										break;
+									}
+								}
+								if (isItemExist)
+								{
+									// Pass
+								}
+								else
+								{
+									eventIdList.Add(eventItem.Id);
+									SendCalendarAlarmToAr(eventItem.Summary); // 캘린더 알림 AR로 전송
+								}
+							}
 						}
-						else
-						{
-							WriteTextBox2("Date Error");
-						}
-					}
-					else // 정확한 시간이 설정되어 있을 경우
-					{
-						DateTime dateTime = eventItem.Start.DateTime.Value;
-
-						TimeSpan timeDiff = dateTime - DateTime.Now;
-						WriteTextBox2(eventItem.Summary + " // Min diff: " + timeDiff.TotalMinutes);
-
-						//--
-						//WriteTextBox2(eventItem.Summary + " // DateTime " + dateTime.ToString());
-						//--
 					}
 				}
+				else
+				{
+					textBox2.Text += ("No upcoming events found.");
+				}
+				// 여기서 저장된 이벤트 id 리스트를 검사해서 쓸모없어진 것들을 제거
+
+				Thread.Sleep(60000); // 1분에 한번씩 캘린더 일정을 검사
 			}
-			else
+		}
+
+		// 캘린더에서 임박한 알림을 Ar로 전송
+		public void SendCalendarAlarmToAr(string eventSummary)
+		{
+			MessageBox.Show(eventSummary);
+			try
 			{
-				textBox2.Text +=("No upcoming events found.");
+				// PacketData에 캘린더 알림 추가
+				packetData.hasNewCalendarAlarm = true;
+				packetData.newCalendarAlarm = eventSummary;
+				// 데이터 전송
+				string xmlData = SerializeToXml(packetData);
+				StreamWriter writer = new StreamWriter(sendingPipe);
+				writer.WriteLine(xmlData);
+				writer.Flush();
+				// PacketData에서 캘린더 알림 삭제
+				packetData.hasNewCalendarAlarm = false;
+				packetData.newCalendarAlarm = null;
 			}
-			Console.Read();
+			catch (Exception ex)
+			{
+				if (!ex.Message.StartsWith("Pipe is broken."))
+				{
+					MessageBox.Show("An error has occurred while seding data. \n" + ex.Message);
+					return;
+				}
+			}
 		}
 
 		public void ConnectSendingPipe()
@@ -314,6 +390,7 @@ namespace CustomMessenger
 			isMessengerClientConnected = false;
 		}
 
+		// 텍스트박스2(메세지 로그)에 string 추가
 		public void WriteTextBox2(string message)
 		{
 			textBox2.Text += message;
@@ -460,31 +537,50 @@ namespace CustomMessenger
 			}
 		}
 
-		private void Form1_Closed(object sender, System.EventArgs e)
+		private void Form1_Closing(object sender, FormClosingEventArgs e)
 		{
-			/*if (sendingPipe.IsConnected)
-				sendingPipe.Close();
-			if (sendingThread.IsAlive)
-				sendingThread.Abort();
-
-			if (receivingPipe.IsConnected)
-				receivingPipe.Close();
-			if (receivingThread.IsAlive)
-				receivingThread.Abort();*/
-
-			if (isMessengerClientConnected)
+			if (e.CloseReason == CloseReason.WindowsShutDown)
 			{
-				isMessengerClientConnected = false;
-				client.Close();
-				messengerClientThread.Abort();
-
+				return;
 			}
-			if (isMessengerServerConnected)
+			else
 			{
-				isMessengerServerConnected = false;
-				connectedClient.Close();
-				server.Close();
-				messengerServerThread.Abort();
+				try
+				{
+					/*if (sendingPipe.IsConnected)
+						sendingPipe.Close();
+					if (sendingThread.IsAlive)
+						sendingThread.Abort();
+
+					if (receivingPipe.IsConnected)
+						receivingPipe.Close();
+					if (receivingThread.IsAlive)
+						receivingThread.Abort();*/
+
+					if (isMessengerClientConnected)
+					{
+						isMessengerClientConnected = false;
+						client.Close();
+						messengerClientThread.Abort();
+
+					}
+					if (isMessengerServerConnected)
+					{
+						isMessengerServerConnected = false;
+						connectedClient.Close();
+						server.Close();
+						messengerServerThread.Abort();
+					}
+					if (googleCalendarThread.IsAlive)
+					{
+						googleCalendarThread.Abort();
+					}
+					MessageBox.Show("프로그램을 정상적으로 종료하셨습니다. \n");
+				}
+				catch (Exception ex)
+				{
+					MessageBox.Show("프로그램이 비정상적으로 종료되었습니다. \n" + ex.Message);
+				}
 			}
 		}
 	}
