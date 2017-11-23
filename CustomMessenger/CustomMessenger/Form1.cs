@@ -94,6 +94,7 @@ namespace CustomMessenger
 
 		public void GoogleCalendar()
 		{
+			int loopCount = 0;
 			while (true)
 			{
 				UserCredential credential;
@@ -210,9 +211,36 @@ namespace CustomMessenger
 				}
 				else
 				{
-					textBox2.Text += ("No upcoming events found.");
+					MessageBox.Show("No upcoming events found.");
 				}
-				// 여기서 저장된 이벤트 id 리스트를 검사해서 쓸모없어진 것들을 제거
+
+				loopCount++;
+
+				// 저장된 이벤트 id 리스트를 검사해서 쓸모없어진 것들을 제거
+				if (loopCount >= 60) // 1시간에 1번씩 검사
+				{
+					if (events.Items != null && events.Items.Count > 0)
+					{
+						foreach (string idItem in eventIdList)
+						{
+							bool isIdExist = false;
+							foreach (var eventItem in events.Items)
+							{
+								if (idItem.Equals(eventItem.Id))
+								{
+									isIdExist = true;
+									break;
+								}
+							}
+							// id가 더 이상 존재하지 않으면 삭제
+							if (!isIdExist)
+							{
+								eventIdList.Remove(idItem);
+							}
+						}
+					}
+					loopCount = 0;
+				}
 
 				Thread.Sleep(60000); // 1분에 한번씩 캘린더 일정을 검사
 			}
