@@ -6,8 +6,8 @@ using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
-using System.IO.Pipes;
 using System.Threading;
+using System.Xml;
 using System.Xml.Serialization;
 using System.IO;
 using System.Net;
@@ -29,22 +29,24 @@ namespace CustomMessenger
 		Thread messengerServerThread;
 		Thread googleCalendarThread;
 
-		NamedPipeClientStream sendingPipe;
-		NamedPipeServerStream receivingPipe;
+		Socket serverAR;
+		Socket connectedClientAR;
+		Socket clientAR;
+		bool isArClientConnected;
+		bool isArServerConnected;
 
 		Socket server;
 		Socket connectedClient;
 		Socket client;
+		bool isMessengerClientConnected;
+		bool isMessengerServerConnected;
 
-		string sendingPipeName;
-		string receivingPipeName;
+		string winPort;
+		string arPort;
 
 		PacketData packetData;
 
-		bool isSendingPipeConnected;
-		bool isReceivingPipeConnected;
-		bool isMessengerClientConnected;
-		bool isMessengerServerConnected;
+		
 
 		// Google Calendar
 		static string[] Scopes = { CalendarService.Scope.CalendarReadonly };
@@ -55,38 +57,17 @@ namespace CustomMessenger
 		{
 			InitializeComponent();
 
-			sendingPipeName = "wtou";
-			receivingPipeName = "utow";
+			winPort = "8282";
+			arPort = "8283";
 
 			packetData = new PacketData();
 			packetData.messageLog = new List<PacketData.Message>();
-
-			try
-			{
-				//sendingPipe = new NamedPipeClientStream(sendingPipeName);
-				//receivingPipe = new NamedPipeServerStream(receivingPipeName);
-			}
-			catch (Exception e)
-			{
-				MessageBox.Show("An error has occurred while pipe open.\n" + e.Message);
-				return;
-			}
 
 			Connect.Click += new EventHandler(this.Button1Click);
 			button2.Click += new EventHandler(this.Button2Click);
 			button3.Click += new EventHandler(this.Button3Click);
 			button4.Click += new EventHandler(this.Button4Click);
 			FormClosing += Form1_Closing;
-
-			/*sendingThread = new Thread(ConnectSendingPipe);
-			sendingThread.Start();
-			receivingThread = new Thread(ConnectReceivingPipe);
-			receivingThread.Start();*/
-
-			/*messengerClientThread = new Thread(MessengerClient);
-			messengerClientThread.Start();
-			messengerServerThread = new Thread(MessengerServer);
-			messengerServerThread.Start();*/
 
 			googleCalendarThread = new Thread(GoogleCalendar);
 			googleCalendarThread.Start();
@@ -260,8 +241,9 @@ namespace CustomMessenger
 				packetData.newCalendarAlarm.summary = eventSummary;
 				packetData.newCalendarAlarm.time = when;
 				// 데이터 전송
+				NetworkStream networkStream = new NetworkStream(clientAR);
 				string xmlData = SerializeToXml(packetData);
-				StreamWriter writer = new StreamWriter(sendingPipe);
+				StreamWriter writer = new StreamWriter(networkStream);
 				writer.WriteLine(xmlData);
 				writer.Flush();
 				// PacketData에서 캘린더 알림 삭제
@@ -277,75 +259,6 @@ namespace CustomMessenger
 					return;
 				}
 			}
-		}
-
-		public void ConnectSendingPipe()
-		{
-			label1.Text = "Not connected";
-			while (!sendingPipe.IsConnected)
-			{
-				label1.Text = "Waiting";
-				sendingPipe.Connect();
-			}
-		}
-
-		public void ConnectReceivingPipe()
-		{
-			label2.Text = "Not connected";
-			receivingPipe.WaitForConnection();
-
-			while (receivingPipe.IsConnected)
-			{
-				label2.Text = "Wait data";
-				StreamReader reader = new StreamReader(receivingPipe);
-				string xmlData;
-				xmlData = reader.ReadLine();
-				if (xmlData != null)
-				{
-					label2.Text = "Receive data";
-					packetData = DeserializeFromXML(xmlData);
-
-					textBox2.Text = "";
-					foreach (PacketData.Message tempMessage in packetData.messageLog)
-					{
-						if (tempMessage.isMe)
-							textBox2.Text += tempMessage.text;
-						else
-							textBox2.Text += "\t" + tempMessage.text;
-						textBox2.Text += "\r\n";
-					}
-				}
-			}
-		}
-
-		public static string SerializeToXml(PacketData data)
-		{
-			string xmlData = null;
-
-			StringWriter stringWriter = null;
-
-			XmlSerializer serializer = new XmlSerializer(data.GetType());
-			stringWriter = new StringWriter();
-			serializer.Serialize(stringWriter, data);
-
-			xmlData = stringWriter.ToString().Replace(Environment.NewLine, " ");
-
-			stringWriter.Close();
-
-			return xmlData;
-		}
-
-		public static PacketData DeserializeFromXML(string xmlData)
-		{
-			PacketData data = null;
-
-			StringReader stringReader = null;
-
-			XmlSerializer deserializer = new XmlSerializer(typeof(PacketData));
-			stringReader = new StringReader(xmlData);
-			data = (PacketData)deserializer.Deserialize(stringReader);
-
-			return data;
 		}
 
 		public void MessengerServer()
@@ -365,21 +278,43 @@ namespace CustomMessenger
 			while (isMessengerServerConnected)
 			{
 				IPEndPoint ip = (IPEndPoint)connectedClient.RemoteEndPoint;
-				//label3.Text = "Server:" + ip.Address;
+				//WriteTextBox2("Server:" + ip.Address);
 
 				String _buf;
 				Byte[] _data = new Byte[1024];
-				int result = connectedClient.Receive(_data);
-				if (result > 0)
+				NetworkStream network = new NetworkStream(connectedClient);
+				StreamReader reader = new StreamReader(network);
+				_buf = reader.ReadLine();
+
+				AddMessageLog(_buf, false);
+				label3.Text = "Server:Receve message";
+
+				Thread.Sleep(100);
+				// AR로 데이터 전송
+				if (isArServerConnected && isArClientConnected)
 				{
-					_buf = Encoding.Default.GetString(_data);
-					AddMessageLog(_buf, false);
-					label3.Text = "Server:Receve message";
+					if (isArClientConnected)
+					{
+						try
+						{
+							// 데이터 전송
+							NetworkStream networkStream = new NetworkStream(clientAR);
+							string xmlData = SerializeToXml(packetData);
+							StreamWriter writer = new StreamWriter(networkStream);
+							writer.WriteLine(xmlData);
+							writer.Flush();
+						}
+						catch (Exception ex)
+						{
+							if (!ex.Message.StartsWith("Pipe is broken."))
+							{
+								MessageBox.Show("An error has occurred while seding data. \n" + ex.Message);
+								return;
+							}
+						}
+					}
 				}
-				else
-				{
-					label3.Text = "Result : " + result.ToString();
-				}
+
 			}
 			label3.Text = "Server:End";
 			connectedClient.Close();
@@ -423,6 +358,118 @@ namespace CustomMessenger
 			isMessengerClientConnected = false;
 		}
 
+		public void ConnectReceivingPipe()
+		{
+			string myPort = winPort; // 내 포트 번호
+			IPEndPoint ipep = new IPEndPoint(IPAddress.Any, Int32.Parse(myPort));
+			serverAR = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+			serverAR.Bind(ipep);
+			label1.Text = "Server:Listen";
+			serverAR.Listen(1);
+			label1.Text = "Server:Listening";
+
+			connectedClientAR = serverAR.Accept();
+			label1.Text = "Server:Accept";
+			isArServerConnected = true;
+			while (isArServerConnected)
+			{
+				IPEndPoint ip = (IPEndPoint)connectedClientAR.RemoteEndPoint;
+				//WriteTextBox2("Server:" + ip.Address);
+
+				label1.Text = "Wait data";
+				NetworkStream networkStream = new NetworkStream(connectedClientAR);
+				StreamReader reader = new StreamReader(networkStream);
+				string xmlData;
+				xmlData = reader.ReadLine();
+				if (xmlData != null)
+				{
+					label1.Text = "Receive data";
+					packetData = DeserializeFromXML(xmlData);
+
+					textBox2.Text = "";
+					foreach (PacketData.Message tempMessage in packetData.messageLog)
+					{
+						if (tempMessage.isMe)
+							textBox2.Text += tempMessage.text;
+						else
+							textBox2.Text += "\t" + tempMessage.text;
+						textBox2.Text += "\r\n";
+					}
+				}
+			}
+			label1.Text = "Server:End";
+			connectedClientAR.Close();
+			serverAR.Close();
+			isArServerConnected = false;
+		}
+
+		public void ConnectSendingPipe()
+		{
+			string connectIP = "127.0.0.1";
+			string connectPort = arPort;
+			IPEndPoint ipep = new IPEndPoint(IPAddress.Parse(connectIP), Int32.Parse(connectPort));
+			clientAR = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			int count = 1;
+			while (isArClientConnected == false)
+			{
+				try
+				{
+					Thread.Sleep(1000);
+					label2.Text = "Client:trying " + count.ToString();
+					count++;
+					//label4.Text = IPAddress.Parse(connectIP).ToString();
+					//label4.Text = "HERE:" + Int32.Parse(connectPort).ToString();
+					clientAR.Connect(ipep);
+					isArClientConnected = true;
+				}
+				catch
+				{
+					isArClientConnected = false;
+				}
+			}
+			label2.Text = "Client:connect";
+
+			while (isArClientConnected)
+			{
+				Thread.Sleep(100);
+			}
+
+			label2.Text = "Client:End";
+			clientAR.Close();
+			isArClientConnected = false;
+		}
+
+		public static string SerializeToXml(PacketData data)
+		{
+			string xmlData = null;
+
+			StringWriter stringWriter = null;
+
+			XmlSerializer serializer = new XmlSerializer(data.GetType());
+			stringWriter = new StringWriter();
+			serializer.Serialize(stringWriter, data);
+
+			xmlData = stringWriter.ToString().Replace(Environment.NewLine, " ");
+
+			stringWriter.Close();
+
+			return xmlData;
+		}
+
+		public static PacketData DeserializeFromXML(string xmlData)
+		{
+			PacketData data = null;
+
+			StringReader stringReader = null;
+
+			XmlSerializer deserializer = new XmlSerializer(typeof(PacketData));
+			stringReader = new StringReader(xmlData);
+			data = (PacketData)deserializer.Deserialize(stringReader);
+
+			return data;
+		}
+
 		// 텍스트박스2(메세지 로그)에 string 추가
 		public void WriteTextBox2(string message)
 		{
@@ -462,29 +509,46 @@ namespace CustomMessenger
 		// 종료 버튼
 		public void Button2Click(object sender, EventArgs e)
 		{
-			/*if (sendingPipe.IsConnected)
-				sendingPipe.Close();
-			if (sendingThread.IsAlive)
-				sendingThread.Abort();
-
-			if (receivingPipe.IsConnected)
-				receivingPipe.Close();
-			if (receivingThread.IsAlive)
-				receivingThread.Abort();*/
-
-			if (isMessengerClientConnected)
+			try
 			{
-				isMessengerClientConnected = false;
-				client.Close();
-				messengerClientThread.Abort();
-				
+				if (isArClientConnected)
+				{
+					isArClientConnected = false;
+					clientAR.Close();
+					sendingThread.Abort();
+				}
+
+				if (isArServerConnected)
+				{
+					isArServerConnected = false;
+					connectedClientAR.Close();
+					serverAR.Close();
+					receivingThread.Abort();
+				}
+
+				if (isMessengerClientConnected)
+				{
+					isMessengerClientConnected = false;
+					client.Close();
+					messengerClientThread.Abort();
+
+				}
+				if (isMessengerServerConnected)
+				{
+					isMessengerServerConnected = false;
+					connectedClient.Close();
+					server.Close();
+					messengerServerThread.Abort();
+				}
+				if (googleCalendarThread.IsAlive)
+				{
+					googleCalendarThread.Abort();
+				}
+				MessageBox.Show("프로그램을 정상적으로 종료하셨습니다. \n");
 			}
-			if (isMessengerServerConnected)
+			catch (Exception ex)
 			{
-				isMessengerServerConnected = false;
-				connectedClient.Close();
-				server.Close();
-				messengerServerThread.Abort();
+				MessageBox.Show("프로그램이 비정상적으로 종료되었습니다. \n" + ex.Message);
 			}
 		}
 
@@ -501,21 +565,22 @@ namespace CustomMessenger
 			{
 				Byte[] _data = new Byte[1024];
 				String _buf;
-				_buf = currentMessage;
+				_buf = currentMessage + '\n';
 				_data = Encoding.Default.GetBytes(_buf);
 				client.Send(_data);
 			}
 
-			/*// AR로 데이터 전송
-			if (sendingPipe.IsConnected && receivingPipe.IsConnected)
+			// AR로 데이터 전송
+			if (isArServerConnected && isArClientConnected)
 			{
-				if (sendingPipe.IsConnected)
+				if (isArClientConnected)
 				{
 					try
 					{
 						// 데이터 전송
+						NetworkStream networkStream = new NetworkStream(clientAR);
 						string xmlData = SerializeToXml(packetData);
-						StreamWriter writer = new StreamWriter(sendingPipe);
+						StreamWriter writer = new StreamWriter(networkStream);
 						writer.WriteLine(xmlData);
 						writer.Flush();
 					}
@@ -528,7 +593,7 @@ namespace CustomMessenger
 						}
 					}
 				}
-			}*/
+			}
 		}
 
 		// 외부 알림 수신 버튼
@@ -539,7 +604,7 @@ namespace CustomMessenger
 			temp.isMe = false;
 			packetData.messageLog.Add(temp);
 
-			if (sendingPipe.IsConnected)
+			if (isArClientConnected)
 			{
 				try
 				{
@@ -554,8 +619,9 @@ namespace CustomMessenger
 						textBox2.Text += "\r\n";
 					}
 					// 데이터 전송
+					NetworkStream networkStream = new NetworkStream(clientAR);
 					string xmlData = SerializeToXml(packetData);
-					StreamWriter writer = new StreamWriter(sendingPipe);
+					StreamWriter writer = new StreamWriter(networkStream);
 					writer.WriteLine(xmlData);
 					writer.Flush();
 				}
@@ -580,15 +646,20 @@ namespace CustomMessenger
 			{
 				try
 				{
-					/*if (sendingPipe.IsConnected)
-						sendingPipe.Close();
-					if (sendingThread.IsAlive)
+					if (isArClientConnected)
+					{
+						isArClientConnected = false;
+						clientAR.Close();
 						sendingThread.Abort();
+					}
 
-					if (receivingPipe.IsConnected)
-						receivingPipe.Close();
-					if (receivingThread.IsAlive)
-						receivingThread.Abort();*/
+					if (isArServerConnected)
+					{
+						isArServerConnected = false;
+						connectedClientAR.Close();
+						serverAR.Close();
+						receivingThread.Abort();
+					}
 
 					if (isMessengerClientConnected)
 					{
@@ -615,6 +686,15 @@ namespace CustomMessenger
 					MessageBox.Show("프로그램이 비정상적으로 종료되었습니다. \n" + ex.Message);
 				}
 			}
+		}
+
+		// AR 연결 버튼
+		private void button1_Click(object sender, EventArgs e)
+		{
+			sendingThread = new Thread(ConnectSendingPipe);
+			sendingThread.Start();
+			receivingThread = new Thread(ConnectReceivingPipe);
+			receivingThread.Start();
 		}
 	}
 }
