@@ -110,6 +110,7 @@ namespace CustomMessenger
 						"user",
 						CancellationToken.None,
 						new FileDataStore(credPath, true)).Result;
+
 					//WriteTextBox2("Credential file saved to: " + credPath);
 				}
 
@@ -167,7 +168,8 @@ namespace CustomMessenger
 									else
 									{
 										eventIdList.Add(eventItem.Id);
-										SendCalendarAlarmToAr(eventItem.Summary); // 캘린더 알림 AR로 전송
+										SendCalendarAlarmToAr(eventItem.Summary, when); // 캘린더 알림 AR로 전송
+										MessageBox.Show(eventItem.Summary + when);
 									}
 								}
 							}
@@ -203,7 +205,8 @@ namespace CustomMessenger
 								else
 								{
 									eventIdList.Add(eventItem.Id);
-									SendCalendarAlarmToAr(eventItem.Summary); // 캘린더 알림 AR로 전송
+									SendCalendarAlarmToAr(eventItem.Summary, when); // 캘린더 알림 AR로 전송
+									MessageBox.Show(eventItem.Summary + when);
 								}
 							}
 						}
@@ -247,14 +250,15 @@ namespace CustomMessenger
 		}
 
 		// 캘린더에서 임박한 알림을 Ar로 전송
-		public void SendCalendarAlarmToAr(string eventSummary)
+		public void SendCalendarAlarmToAr(string eventSummary, string when)
 		{
 			MessageBox.Show(eventSummary);
 			try
 			{
 				// PacketData에 캘린더 알림 추가
 				packetData.hasNewCalendarAlarm = true;
-				packetData.newCalendarAlarm = eventSummary;
+				packetData.newCalendarAlarm.summary = eventSummary;
+				packetData.newCalendarAlarm.time = when;
 				// 데이터 전송
 				string xmlData = SerializeToXml(packetData);
 				StreamWriter writer = new StreamWriter(sendingPipe);
@@ -262,7 +266,8 @@ namespace CustomMessenger
 				writer.Flush();
 				// PacketData에서 캘린더 알림 삭제
 				packetData.hasNewCalendarAlarm = false;
-				packetData.newCalendarAlarm = null;
+				packetData.newCalendarAlarm.summary = null;
+				packetData.newCalendarAlarm.time = null;
 			}
 			catch (Exception ex)
 			{
