@@ -80,7 +80,6 @@ namespace CustomMessenger
 			{
 				Thread.Sleep(1000); // 캘린더 스레드는 AR 프로그램의 연결을 기다린다.
 			}
-			MessageBox.Show("google calendar connected");
 			int loopCount = 0;
 			while (true)
 			{
@@ -156,7 +155,7 @@ namespace CustomMessenger
 									{
 										eventIdList.Add(eventItem.Id);
 										SendCalendarAlarmToAr(eventItem.Summary, when); // 캘린더 알림 AR로 전송
-										MessageBox.Show(eventItem.Summary + when);
+										//MessageBox.Show(eventItem.Summary + when);
 									}
 								}
 							}
@@ -193,7 +192,7 @@ namespace CustomMessenger
 								{
 									eventIdList.Add(eventItem.Id);
 									SendCalendarAlarmToAr(eventItem.Summary, when); // 캘린더 알림 AR로 전송
-									MessageBox.Show(eventItem.Summary + when);
+									//MessageBox.Show(eventItem.Summary + when);
 								}
 							}
 						}
@@ -201,7 +200,7 @@ namespace CustomMessenger
 				}
 				else
 				{
-					MessageBox.Show("No upcoming events found.");
+					//MessageBox.Show("No upcoming events found.");
 				}
 
 				loopCount++;
@@ -239,7 +238,7 @@ namespace CustomMessenger
 		// 캘린더에서 임박한 알림을 Ar로 전송
 		public void SendCalendarAlarmToAr(string eventSummary, string when)
 		{
-			MessageBox.Show(eventSummary);
+			//MessageBox.Show(eventSummary);
 			try
 			{
 				// PacketData에 캘린더 알림 추가
@@ -286,12 +285,22 @@ namespace CustomMessenger
 				IPEndPoint ip = (IPEndPoint)connectedClient.RemoteEndPoint;
 				//WriteTextBox2("Server:" + ip.Address);
 
-				String _buf = "";
+				string _buf = "";
 				Byte[] _data = new Byte[1024];
 				NetworkStream network = new NetworkStream(connectedClient);
 				StreamReader reader = new StreamReader(network);
-				_buf = reader.ReadLine();
-				
+				//_buf = reader.ReadLine();
+
+				while (true)
+				{
+					label3.Text = "Server:Reading";
+					
+					_buf += reader.ReadLine();
+					if (reader.Peek() >= 0)
+						_buf += "\r\n";
+					else
+						break;
+				}
 
 				AddMessageLog(_buf, false);
 				UpdateTextBox2();
@@ -332,6 +341,7 @@ namespace CustomMessenger
 		public void MessengerClient()
 		{
 			string connectIP = textBox4.Text;
+			//string connectIP = "127.0.0.1";
 			string connectPort = textBox5.Text;
 			IPEndPoint ipep = new IPEndPoint(IPAddress.Parse(connectIP), Int32.Parse(connectPort));
 			client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -387,14 +397,40 @@ namespace CustomMessenger
 				label1.Text = "Wait data";
 				NetworkStream networkStream = new NetworkStream(connectedClientAR);
 				StreamReader reader = new StreamReader(networkStream);
-				string xmlData;
-				xmlData = reader.ReadLine();
-				if (xmlData != null)
+				string xmlData = "";
+				while (true)
+				{
+					xmlData = reader.ReadLine();
+					if (reader.Peek() >= 0)
+						xmlData += "\r\n";
+					else
+						break;
+				}
+				if (!xmlData.Equals(""))
 				{
 					label1.Text = "Receive data";
 					packetData = DeserializeFromXML(xmlData);
 
 					UpdateTextBox2();
+
+					// 상대방에게 데이터 전송
+					if (isMessengerClientConnected && isMessengerServerConnected)
+					{
+						//Byte[] _data = new Byte[1024];
+						//String _buf;
+
+						//_buf = currentMessage + '\n';
+						//_data = Encoding.Default.GetBytes(_buf);
+						//client.Send(_data);
+
+						NetworkStream network = new NetworkStream(client);
+						StreamWriter writer = new StreamWriter(network);
+						string currentMessage = packetData.messageLog[packetData.messageLog.Count - 1].text;
+
+						//writer.WriteLine(currentMessage);
+						writer.WriteLine(currentMessage.ToCharArray(), 0, currentMessage.Length);
+						writer.Flush();
+					}
 				}
 			}
 			label1.Text = "Server:End";
@@ -478,7 +514,6 @@ namespace CustomMessenger
 			temp.text = message;
 			temp.isMe = isInternal;
 			packetData.messageLog.Add(temp);
-
 		}
 
 		// 텍스트박스2(메세지 로그 본문)을 현재 메세지 로그로 업데이트
@@ -569,12 +604,20 @@ namespace CustomMessenger
 			// 상대방에게 데이터 전송
 			if (isMessengerClientConnected && isMessengerServerConnected)
 			{
-				Byte[] _data = new Byte[1024];
-				String _buf;
+				//Byte[] _data = new Byte[1024];
+				//String _buf;
 
-				_buf = currentMessage + '\n';
-				_data = Encoding.Default.GetBytes(_buf);
-				client.Send(_data);
+				//_buf = currentMessage + '\n';
+				//_data = Encoding.Default.GetBytes(_buf);
+				//client.Send(_data);
+
+				NetworkStream networkStream = new NetworkStream(client);
+				StreamWriter writer = new StreamWriter(networkStream);
+				//currentMessage += '\n';
+				
+				//writer.WriteLine(currentMessage);
+				writer.WriteLine(currentMessage.ToCharArray(), 0, currentMessage.Length);
+				writer.Flush();
 			}
 
 			// AR로 데이터 전송
