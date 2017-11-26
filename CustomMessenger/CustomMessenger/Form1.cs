@@ -46,7 +46,8 @@ namespace CustomMessenger
 
 		PacketData packetData;
 
-		
+		string myName = "석문주";
+		string yourName = "기몽재";
 
 		// Google Calendar
 		static string[] Scopes = { CalendarService.Scope.CalendarReadonly };
@@ -75,6 +76,11 @@ namespace CustomMessenger
 
 		public void GoogleCalendar()
 		{
+			while (!isArClientConnected || !isArServerConnected)
+			{
+				Thread.Sleep(1000); // 캘린더 스레드는 AR 프로그램의 연결을 기다린다.
+			}
+			MessageBox.Show("google calendar connected");
 			int loopCount = 0;
 			while (true)
 			{
@@ -280,16 +286,18 @@ namespace CustomMessenger
 				IPEndPoint ip = (IPEndPoint)connectedClient.RemoteEndPoint;
 				//WriteTextBox2("Server:" + ip.Address);
 
-				String _buf;
+				String _buf = "";
 				Byte[] _data = new Byte[1024];
 				NetworkStream network = new NetworkStream(connectedClient);
 				StreamReader reader = new StreamReader(network);
 				_buf = reader.ReadLine();
+				
 
 				AddMessageLog(_buf, false);
+				UpdateTextBox2();
+
 				label3.Text = "Server:Receve message";
 
-				Thread.Sleep(100);
 				// AR로 데이터 전송
 				if (isArServerConnected && isArClientConnected)
 				{
@@ -314,7 +322,6 @@ namespace CustomMessenger
 						}
 					}
 				}
-
 			}
 			label3.Text = "Server:End";
 			connectedClient.Close();
@@ -387,15 +394,7 @@ namespace CustomMessenger
 					label1.Text = "Receive data";
 					packetData = DeserializeFromXML(xmlData);
 
-					textBox2.Text = "";
-					foreach (PacketData.Message tempMessage in packetData.messageLog)
-					{
-						if (tempMessage.isMe)
-							textBox2.Text += tempMessage.text;
-						else
-							textBox2.Text += "\t" + tempMessage.text;
-						textBox2.Text += "\r\n";
-					}
+					UpdateTextBox2();
 				}
 			}
 			label1.Text = "Server:End";
@@ -470,13 +469,8 @@ namespace CustomMessenger
 			return data;
 		}
 
-		// 텍스트박스2(메세지 로그)에 string 추가
-		public void WriteTextBox2(string message)
-		{
-			textBox2.Text += message;
-			textBox2.Text += "\r\n";
-		}
 
+		// PacketData의 메세지 로그에 메세지 추가
 		public void AddMessageLog(string message, bool isInternal)
 		{
 			// 메세지 로그 생성
@@ -485,16 +479,27 @@ namespace CustomMessenger
 			temp.isMe = isInternal;
 			packetData.messageLog.Add(temp);
 
+		}
+
+		// 텍스트박스2(메세지 로그 본문)을 현재 메세지 로그로 업데이트
+		public void UpdateTextBox2()
+		{
 			// 로그 텍스트박스 업데이트
 			textBox2.Text = "";
 			foreach (PacketData.Message tempMessage in packetData.messageLog)
 			{
 				if (tempMessage.isMe)
-					textBox2.Text += tempMessage.text;
+					WriteTextBox2(myName + " : " + tempMessage.text);
 				else
-					textBox2.Text += "\t" + tempMessage.text;
-				textBox2.Text += "\r\n";
+					WriteTextBox2(yourName + " : " + tempMessage.text);
 			}
+		}
+
+		// 텍스트박스2(메세지 로그)에 string 추가
+		public void WriteTextBox2(string message)
+		{
+			textBox2.Text += message;
+			textBox2.Text += "\r\n";
 		}
 
 		// 연결(Connect) 버튼
@@ -559,12 +564,14 @@ namespace CustomMessenger
 			string currentMessage = textBox1.Text;
 			textBox1.Text = "";
 			AddMessageLog(currentMessage, true);
+			UpdateTextBox2();
 
 			// 상대방에게 데이터 전송
 			if (isMessengerClientConnected && isMessengerServerConnected)
 			{
 				Byte[] _data = new Byte[1024];
 				String _buf;
+
 				_buf = currentMessage + '\n';
 				_data = Encoding.Default.GetBytes(_buf);
 				client.Send(_data);
